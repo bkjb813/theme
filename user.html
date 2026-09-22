@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>专属主题领取</title>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;color:#333}
+.card{background:rgba(255,255,255,.97);border-radius:24px;padding:36px 28px;max-width:380px;width:100%;box-shadow:0 25px 80px rgba(0,0,0,.4)}
+.logo{width:64px;height:64px;margin:0 auto 16px;background:linear-gradient(135deg,#e64737,#f0863c);border-radius:18px;display:flex;align-items:center;justify-content:center}
+h1{font-size:22px;font-weight:700;text-align:center;margin-bottom:6px;color:#333}
+.sub{font-size:13px;color:#888;text-align:center;line-height:1.6;margin-bottom:24px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;font-weight:600;color:#555;margin-bottom:6px}
+.field input{width:100%;padding:14px 16px;border:2px solid #e8e8e8;border-radius:12px;font-size:16px;outline:none;background:#fafafa}
+.field input:focus{border-color:#e64737;background:#fff}
+.field input.error{border-color:#e74c3c}
+.err{color:#e74c3c;font-size:12px;margin-top:5px;display:none}
+.btn{width:100%;padding:15px;background:linear-gradient(135deg,#e64737,#f0863c);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;margin-top:8px}
+.btn:disabled{opacity:.6}
+.bar{width:100%;height:6px;background:#eee;border-radius:3px;margin-top:16px;display:none;overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#e64737,#f0863c);width:0;transition:width .3s;border-radius:3px}
+.bt{text-align:center;font-size:13px;color:#999;margin-top:8px;display:none}
+.tip{text-align:center;font-size:11px;color:#bbb;margin-top:18px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+    </svg>
+  </div>
+  <h1>专属主题领取</h1>
+  <div class="sub">输入QQ号，一键生成你的专属主题<br>每个文件都有唯一水印，请勿外传</div>
+  <div class="field">
+    <label>你的QQ号</label>
+    <input type="text" id="qq" placeholder="请输入QQ号" inputmode="numeric" maxlength="11">
+    <div class="err" id="err">请输入正确的QQ号（5-11位数字）</div>
+  </div>
+  <button class="btn" id="btn" onclick="gen()">✨ 生成我的主题文件</button>
+  <div class="bar" id="bar"><i id="barFill"></i></div>
+  <div class="bt" id="barText"></div>
+  <div class="tip">每个QQ号限领一次，请勿重复领取</div>
+</div>
+
+<script>
+// ====== 配置区（和admin.html填一样的）======
+const GITEE_USER = 'qnxxx';
+const GITEE_REPO = 'red-theme';
+const GITEE_TOKEN = '90fedc026e1680d8e1e383fbb527d6cd';
+// ==========================================
+
+const RAW = 'https://gitee.com/' + GITEE_USER + '/' + GITEE_REPO + '/raw/master';
+const API = 'https://gitee.com/api/v5/repos/' + GITEE_USER + '/' + GITEE_REPO + '/contents';
+
+// LSB水印
+const M0=0x57,M1=0x4D,SP=1000,REDH=[0x52,0x45,0x44,0x04];
+const isPng=d=>d.length>8&&d[0]==0x89&&d[1]==0x50&&d[2]==0x4E&&d[3]==0x47;
+
+async function loadPx(blob){
+  const bmp=await createImageBitmap(blob,{colorSpaceConversion:'none',imageOrientation:'none'});
+  const c=document.createElement('canvas');c.width=bmp.width;c.height=bmp.height;
+  const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(bmp,0,0);
+  const id=ctx.getImageData(0,0,bmp.width,bmp.height);bmp.close();
+  return{id,w:bmp.width,h:bmp.height,c,ctx};
+}
+function buildP(t){
+  const u=new TextEncoder().encode(t);let l=Math.min(u.length,0xFFFF);
+  const p=new Uint8Array(4+l);p[0]=M0;p[1]=M1;p[2]=(l>>8)&255;p[3]=l&255;
+  p.set(u.subarray(0,l),4);return p;
+}
+function bit(p,i){return(p[(i/8)|0]>>(7-(i%8)))&1}
+async function embed(blob,qq){
+  const{id,w,h,c,ctx}=await loadPx(blob);
+  const px=id.data,tot=w*h,pay=buildP(qq),tb=pay.length*8;
+  if((tot-SP)*3<tb)throw new Error('图片太小');
+  let bi=0;
+  for(let p=SP;p<tot&&bi<tb;p++){
+    const o=p*4;
+    px[o]=(px[o]&254)|bit(pay,bi++);
+    if(bi<tb)px[o+1]=(px[o+1]&254)|bit(pay,bi++);
+    if(bi<tb)px[o+2]=(px[o+2]&254)|bit(pay,bi++);
+  }
+  ctx.putImageData(id,0,0);
+  return await new Promise((r,j)=>c.toBlob(b=>b?r(b):j(),'image/png',1));
+}
+
+async function getClaims() {
+  try {
+    const r = await fetch(RAW + '/claims.json');
+    if (!r.ok) return [];
+    return await r.json();
+  } catch(e) { return []; }
+}
+
+async function addClaim(qq) {
+  const claims = await getClaims();
+  claims.push({ qq: qq, time: new Date().toISOString() });
+  const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(claims))));
+  // Get SHA
+  const existing = await fetch(API + '/claims.json?access_token=' + GITEE_TOKEN).then(r => r.json()).catch(() => null);
+  const body = {
+    access_token: GITEE_TOKEN,
+    content: b64,
+    message: '领取: ' + qq,
+    branch: 'master'
+  };
+  if (existing && existing.sha) body.sha = existing.sha;
+  const method = existing && existing.sha ? 'PUT' : 'POST';
+  await fetch(API + '/claims.json', {
+    method: method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+}
+
+async function gen(){
+  const qq=document.getElementById('qq').value.trim();
+  const err=document.getElementById('err'),inp=document.getElementById('qq');
+  if(!/^[0-9]{5,11}$/.test(qq)){err.style.display='block';inp.classList.add('error');return}
+  err.style.display='none';inp.classList.remove('error');
+  const btn=document.getElementById('btn'),bar=document.getElementById('bar'),bt=document.getElementById('barText');
+  btn.disabled=true;bar.style.display='block';bt.style.display='block';
+  const setBar=(p,m)=>{document.getElementById('barFill').style.width=p+'%';bt.textContent=m};
+  try{
+    setBar(10,'验证QQ号...');
+    const claims = await getClaims();
+    if (claims.some(c => c.qq === qq)) throw new Error('该QQ号已领取过此主题');
+
+    setBar(30,'下载文件...');
+    const origBuf = await fetch(RAW + '/theme.red').then(r => {
+      if (!r.ok) throw new Error('主题文件不存在，请联系管理员');
+      return r.arrayBuffer();
+    });
+
+    setBar(50,'解析中...');
+    const zip=await JSZip.loadAsync(origBuf.slice(4));
+    const names=Object.keys(zip.files);
+    let n=0;
+    for(let i=0;i<names.length;i++){
+      const e=zip.files[names[i]];
+      if(e.dir)continue;
+      const d=await e.async('uint8array');
+      if(isPng(d)){
+        n++;
+        setBar(50+(i/names.length)*35,`打标中 (${n}张)...`);
+        const b=await embed(new Blob([d],{type:'image/png'}),qq);
+        zip.file(names[i],await b.arrayBuffer());
+      }
+    }
+    setBar(90,'打包中...');
+    const nz=await zip.generateAsync({type:'arraybuffer',compression:'DEFLATE',compressionOptions:{level:6}});
+    const out=new Uint8Array(4+nz.byteLength);
+    out.set(REDH,0);out.set(new Uint8Array(nz),4);
+
+    // 记录领取
+    await addClaim(qq);
+
+    const blob=new Blob([out],{type:'application/octet-stream'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download='theme_'+qq+'.red';
+    a.click();URL.revokeObjectURL(url);
+    setBar(100,'完成！');
+    btn.textContent='✅ 已领取，文件已下载';
+  }catch(e){
+    setBar(0,'❌ '+e.message);
+    btn.disabled=false;btn.textContent='重试';
+  }
+}
+</script>
+</body>
+</html>
