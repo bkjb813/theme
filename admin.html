@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>主题管理后台</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:#f0f2f5;min-height:100vh;color:#333;padding:16px;max-width:480px;margin:0 auto}
+.header{display:flex;align-items:center;gap:12px;padding:20px 0 16px}
+.header .icon{width:44px;height:44px;background:linear-gradient(135deg,#e64737,#f0863c);border-radius:12px;display:flex;align-items:center;justify-content:center}
+.header h1{font-size:20px;font-weight:700}
+.header p{font-size:12px;color:#999;margin-top:2px}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px}
+.stat-card{background:#fff;border-radius:14px;padding:16px 12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.stat-card .num{font-size:24px;font-weight:700;color:#e64737}
+.stat-card .label{font-size:11px;color:#999;margin-top:4px}
+.section{background:#fff;border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.section-title{font-size:15px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .2s}
+.btn:active{opacity:.8}
+.btn-primary{background:linear-gradient(135deg,#e64737,#f0863c);color:#fff}
+.btn-outline{background:#f5f5f5;color:#555}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.file-info{background:#f8f9fa;border-radius:10px;padding:12px;font-size:13px;color:#666;line-height:1.6;margin-top:10px}
+.record-list{max-height:300px;overflow-y:auto}
+.record-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:13px}
+.record-item:last-child{border-bottom:none}
+.record-item .qq{font-weight:600;color:#333}
+.record-item .time{color:#999;font-size:12px}
+.record-empty{text-align:center;color:#ccc;padding:30px 0;font-size:14px}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.badge-ok{background:#d4edda;color:#155724}
+input[type=file]{display:none}
+.hidden{display:none}
+.share-link{background:#fff5f0;border-radius:10px;padding:12px;font-size:12px;color:#e64737;margin-top:10px;word-break:all}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="icon">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+    </svg>
+  </div>
+  <div>
+    <h1>主题管理后台</h1>
+    <p>上传文件 · 查看领取记录</p>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat-card"><div class="num" id="statTotal">-</div><div class="label">已领取</div></div>
+  <div class="stat-card"><div class="num" id="statToday">-</div><div class="label">今日</div></div>
+  <div class="stat-card"><div class="num" id="statFile">-</div><div class="label">文件</div></div>
+</div>
+
+<div class="section">
+  <div class="section-title">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e64737" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+    上传主题文件
+  </div>
+  <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+    <span id="uploadBtnText">选择 .red 文件</span>
+  </button>
+  <input type="file" id="fileInput" accept=".red">
+  <div class="file-info hidden" id="fileInfo"></div>
+</div>
+
+<div class="section hidden" id="linkSection">
+  <div class="section-title">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+    </svg>
+    用户领取链接
+  </div>
+  <div class="share-link" id="shareLink"></div>
+  <button class="btn btn-outline" style="margin-top:10px" onclick="copyLink()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+    </svg>
+    复制链接
+  </button>
+</div>
+
+<div class="section">
+  <div class="section-title">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e64737" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+    </svg>
+    领取记录
+  </div>
+  <div class="record-list" id="recordList"><div class="record-empty">加载中...</div></div>
+  <div style="margin-top:10px;text-align:center">
+    <button class="btn btn-outline" style="width:auto;padding:8px 20px;font-size:13px" onclick="clearRecords()">清空记录</button>
+  </div>
+</div>
+
+<script>
+// ====== 配置区（注册Gitee后填这里）======
+const GITEE_USER = 'qnxxx';
+const GITEE_REPO = 'red-theme';
+const GITEE_TOKEN = '90fedc026e1680d8e1e383fbb527d6cd';
+// ============================================
+
+const API = 'https://gitee.com/api/v5/repos/' + GITEE_USER + '/' + GITEE_REPO + '/contents';
+
+async function giteeGet(path) {
+  const r = await fetch(API + '/' + path + '?access_token=' + GITEE_TOKEN);
+  if (r.status === 404) return null;
+  const j = await r.json();
+  if (j.content) {
+    return JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g, '')))));
+  }
+  return j;
+}
+
+async function giteePut(path, content, message) {
+  const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(content))));
+  // Check if file exists (need SHA to update)
+  const existing = await fetch(API + '/' + path + '?access_token=' + GITEE_TOKEN).then(r => r.json()).catch(() => null);
+  const body = {
+    access_token: GITEE_TOKEN,
+    content: b64,
+    message: message || 'update',
+    branch: 'master'
+  };
+  if (existing && existing.sha) body.sha = existing.sha;
+  const method = existing && existing.sha ? 'PUT' : 'POST';
+  const r = await fetch(API + '/' + path, {
+    method: method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+
+async function loadData() {
+  try {
+    // 获取 claims.json
+    const claims = await giteeGet('claims.json') || [];
+    document.getElementById('statTotal').textContent = claims.length;
+    const today = new Date().toDateString();
+    document.getElementById('statToday').textContent = claims.filter(c => new Date(c.time).toDateString() === today).length;
+
+    // 获取当前文件信息
+    const info = await giteeGet('theme_info.json') || null;
+    if (info) {
+      document.getElementById('fileInfo').classList.remove('hidden');
+      document.getElementById('fileInfo').innerHTML = `当前文件：${info.name}<br>大小：${(info.size/1024/1024).toFixed(2)} MB<br><span class="badge badge-ok">已就绪</span>`;
+      document.getElementById('linkSection').classList.remove('hidden');
+      document.getElementById('shareLink').textContent = location.origin + location.pathname.replace('admin.html', 'user.html');
+      document.getElementById('statFile').textContent = 1;
+    } else {
+      document.getElementById('statFile').textContent = 0;
+    }
+
+    const list = document.getElementById('recordList');
+    if (claims.length === 0) {
+      list.innerHTML = '<div class="record-empty">暂无记录</div>';
+    } else {
+      list.innerHTML = claims.slice().reverse().map(c =>
+        `<div class="record-item"><span class="qq">QQ: ${c.qq}</span><span class="time">${new Date(c.time).toLocaleString()}</span></div>`
+      ).join('');
+    }
+  } catch(e) {
+    document.getElementById('recordList').innerHTML = '<div class="record-empty">加载失败：' + e.message + '</div>';
+  }
+}
+
+document.getElementById('fileInput').addEventListener('change', async function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const btn = document.getElementById('uploadBtnText');
+  btn.textContent = '上传中... (大文件需要等一会)';
+  try {
+    // 读取文件为 base64
+    const buf = await file.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    const b64 = btoa(binary);
+
+    // 上传文件到仓库
+    const path = 'theme.red';
+    const existing = await fetch(API + '/' + path + '?access_token=' + GITEE_USER + '&access_token=' + GITEE_TOKEN).then(r => r.json()).catch(() => null);
+    const body = {
+      access_token: GITEE_TOKEN,
+      content: b64,
+      message: '上传主题文件',
+      branch: 'master'
+    };
+    if (existing && existing.sha) body.sha = existing.sha;
+    const method = existing && existing.sha ? 'PUT' : 'POST';
+    await fetch(API + '/' + path, {
+      method: method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    // 保存文件信息
+    await giteePut('theme_info.json', { name: file.name, size: file.size, uploadTime: new Date().toISOString() }, '更新文件信息');
+
+    // 清空旧领取记录
+    await giteePut('claims.json', [], '清空领取记录');
+
+    btn.textContent = '上传成功！';
+    loadData();
+  } catch(err) {
+    alert('上传失败：' + err.message);
+    btn.textContent = '重新上传';
+  }
+});
+
+function copyLink() {
+  navigator.clipboard.writeText(document.getElementById('shareLink').textContent).then(() => alert('链接已复制'));
+}
+
+async function clearRecords() {
+  if (!confirm('确定清空所有领取记录？')) return;
+  await giteePut('claims.json', [], '清空记录');
+  loadData();
+}
+
+loadData();
+</script>
+</body>
+</html>
